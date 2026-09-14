@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:paddingVertical="8dp"
+    android:paddingHorizontal="12dp"
+    android:gravity="center_vertical">
+
+    <TextView
+        android:id="@+id/rowTime"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1.6"
+        android:text="14:30:05"
+        android:textColor="?colorOnSurface"
+        android:textSize="11sp"
+        android:fontFamily="monospace" />
+
+    <TextView
+        android:id="@+id/rowTop"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1.1"
+        android:text="28.5°"
+        android:textColor="#FF7043"
+        android:textSize="11sp"
+        android:fontFamily="monospace"
+        android:gravity="center" />
+
+    <TextView
+        android:id="@+id/rowMid"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1.1"
+        android:text="27.0°"
+        android:textColor="#00E5FF"
+        android:textSize="11sp"
+        android:fontFamily="monospace"
+        android:gravity="center" />
+
+    <TextView
+        android:id="@+id/rowBot"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1.1"
+        android:text="26.8°"
+        android:textColor="#E040FB"
+        android:textSize="11sp"
+        android:fontFamily="monospace"
+        android:gravity="center" />
+
+    <TextView
+        android:id="@+id/rowState"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1.4"
+        android:text="IDLE"
+        android:textColor="?colorOnSurfaceVariant"
+        android:textSize="10sp"
+        android:textStyle="bold"
+        android:gravity="center" />
+
+    <TextView
+        android:id="@+id/rowGps"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1.7"
+        android:text="FIX (8)"
+        android:textColor="@color/accent_ok"
+        android:textSize="10sp"
+        android:fontFamily="monospace"
+        android:gravity="end" />
+
+</LinearLayout>

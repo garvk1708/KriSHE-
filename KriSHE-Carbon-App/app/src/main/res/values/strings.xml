@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">KriSHE Carbon</string>
+    <string name="nav_scanner">Scanner</string>
+    <string name="nav_dashboard">Dashboard</string>
+    <string name="nav_logs">Logs</string>
+    <string name="nav_settings">Settings</string>
+
+    <!-- Scanner -->
+    <string name="scan_ble">Scan Bluetooth</string>
+    <string name="scan_wifi">Connect Wi-Fi</string>
+    <string name="scanning">Scanning…</string>
+    <string name="no_devices">No KriSHE nodes found</string>
+    <string name="connect">Connect</string>
+    <string name="disconnect">Disconnect</string>
+    <string name="connected">Connected</string>
+    <string name="disconnected">Disconnected</string>
+    <string name="ble_mode">BLE Mode</string>
+    <string name="wifi_mode">Wi-Fi Mode</string>
+
+    <!-- Dashboard -->
+    <string name="top_temp">TOP</string>
+    <string name="mid_temp">MIDDLE</string>
+    <string name="bot_temp">BOTTOM</string>
+    <string name="kiln_state">Kiln State</string>
+    <string name="gnss_status">GNSS Status</string>
+    <string name="uptime">Uptime</string>
+    <string name="no_data">—</string>
+    <string name="sensor_ok">OK</string>
+    <string name="sensor_fault">FAULT</string>
+    <string name="gps_fixed">FIXED</string>
+    <string name="gps_searching">SEARCHING</string>
+
+    <!-- Logs -->
+    <string name="start_recording">Start Recording</string>
+    <string name="stop_recording">Stop Recording</string>
+    <string name="export_csv">Export CSV</string>
+    <string name="clear_all">Clear All Data</string>
+    <string name="no_sessions">No recorded sessions</string>
+    <string name="recording_active">Recording…</string>
+
+    <!-- Permissions -->
+    <string name="permission_rationale_ble">Bluetooth permission is needed to scan for KriSHE sensor nodes.</string>
+    <string name="permission_rationale_location">Location access is required for Bluetooth scanning on this Android version.</string>
+</resources>

@@ -749,7 +749,3 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 
 Copyright © 2026 KriSHE Carbon. All rights reserved.  
 Unauthorized copying, modification, distribution, or reverse engineering of this firmware or companion software is strictly prohibited.
-#   K r i S H E -  
- #   K r i S H E -  
- #   K r i S H E -  
- 

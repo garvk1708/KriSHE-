@@ -1,0 +1,24 @@
+# PlatformIO
+.pio/
+.pioenvs/
+.piolibdeps/
+
+# Android & Gradle
+.gradle/
+**/build/
+*.apk
+*.aab
+local.properties
+.cxx/
+.externalNativeBuild/
+
+# IDE and Editor files
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# OS generated files
+.DS_Store
+Thumbs.db

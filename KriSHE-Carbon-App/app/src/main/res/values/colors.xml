@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- MD3 Seed Color — Deep Indigo Blue -->
+    <color name="md_seed">#4F6BFF</color>
+
+    <!-- Primary -->
+    <color name="md_primary">#B0C6FF</color>
+    <color name="md_on_primary">#002D6E</color>
+    <color name="md_primary_container">#00429B</color>
+    <color name="md_on_primary_container">#D9E2FF</color>
+
+    <!-- Secondary -->
+    <color name="md_secondary">#BEC6DC</color>
+    <color name="md_on_secondary">#283141</color>
+    <color name="md_secondary_container">#3E4758</color>
+    <color name="md_on_secondary_container">#DAE2F9</color>
+
+    <!-- Tertiary -->
+    <color name="md_tertiary">#DEBCE0</color>
+    <color name="md_on_tertiary">#3F2844</color>
+    <color name="md_tertiary_container">#573E5B</color>
+    <color name="md_on_tertiary_container">#FBD7FC</color>
+
+    <!-- Error -->
+    <color name="md_error">#FFB4AB</color>
+    <color name="md_on_error">#690005</color>
+    <color name="md_error_container">#93000A</color>
+    <color name="md_on_error_container">#FFDAD6</color>
+
+    <!-- Surface (Dark) -->
+    <color name="md_surface">#111318</color>
+    <color name="md_on_surface">#E2E2E9</color>
+    <color name="md_surface_variant">#44474E</color>
+    <color name="md_on_surface_variant">#C4C6CF</color>
+    <color name="md_surface_container">#1D1F25</color>
+    <color name="md_surface_container_high">#282A30</color>
+    <color name="md_surface_container_highest">#33353B</color>
+
+    <!-- Outline -->
+    <color name="md_outline">#8E9099</color>
+    <color name="md_outline_variant">#44474E</color>
+
+    <!-- Custom Accents for probes -->
+    <color name="accent_top">#F97316</color>
+    <color name="accent_mid">#06B6D4</color>
+    <color name="accent_bot">#A855F7</color>
+    <color name="accent_ok">#22C55E</color>
+    <color name="accent_err">#EF4444</color>
+    <color name="accent_warn">#F59E0B</color>
+
+    <!-- Nav bar -->
+    <color name="nav_indicator">#00429B</color>
+</resources>
