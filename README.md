@@ -62,22 +62,22 @@ Industrial-grade digital Measurement, Reporting, and Verification (**dMRV**) tel
 ## 1. Physical & Carbon Verification Domain Context
 
 ### What is Pyrolysis and Biochar?
-Biochar is stable, carbon-rich solid biomass produced through **pyrolysis**—the thermal decomposition of organic agricultural waste (e.g., crop residue, wood prunings, coconut shells) under an oxygen-depleted or oxygen-limited atmosphere. Unlike open biomass decomposition or combustion, which releases biomass carbon back into the atmosphere as carbon dioxide ($\text{CO}_2$) and methane ($\text{CH}_4$), biochar locks atmospheric carbon into an inert, highly aromatic recalcitrant carbon matrix that remains stable in soils for hundreds to thousands of years.
+Biochar is stable, carbon-rich solid biomass produced through **pyrolysis**—the thermal decomposition of organic agricultural waste (e.g., crop residue, wood prunings, coconut shells) under an oxygen-depleted or oxygen-limited atmosphere. Unlike open biomass decomposition or combustion, which releases biomass carbon back into the atmosphere as carbon dioxide (CO₂) and methane (CH₄), biochar locks atmospheric carbon into an inert, highly aromatic recalcitrant carbon matrix that remains stable in soils for hundreds to thousands of years.
 
 Pyrolysis occurs through distinct physical-chemical phases dependent on temperature:
-1. **Drying & Torrefaction ($100^\circ\text{C} - 250^\circ\text{C}$)**: Moisture evaporates; light volatile hemiceullulose chains degrade.
-2. **Exothermic Pyrolysis ($300^\circ\text{C} - 550^\circ\text{C}$)**: Cellulose and lignin depolymerize, producing condensable bio-oils, non-condensable syngas ($\text{CO}, \text{H}_2, \text{CH}_4$), and solid fixed-carbon biochar. The reaction becomes autothermal (exothermic).
-3. **High-Temperature Carbonization ($>600^\circ\text{C}$)**: Secondary cracking of tars, maximizing aromatic graphitic carbon rings, pore volume, and cation-exchange capacity.
+1. **Drying & Torrefaction (100°C - 250°C)**: Moisture evaporates; light volatile hemiceullulose chains degrade.
+2. **Exothermic Pyrolysis (300°C - 550°C)**: Cellulose and lignin depolymerize, producing condensable bio-oils, non-condensable syngas (CO, H₂, CH₄), and solid fixed-carbon biochar. The reaction becomes autothermal (exothermic).
+3. **High-Temperature Carbonization (>600°C)**: Secondary cracking of tars, maximizing aromatic graphitic carbon rings, pore volume, and cation-exchange capacity.
 
 ### Why Multi-Zone Temperature Tracking is Mandatory
 In artisanal flame-curtain kilns (Kon-Tiki, Ring, or Pit kilns) and industrial retorts, temperature distribution is non-uniform due to convective buoyant air currents and flame-cap boundary layers:
-- **TOP Zone**: Measures the flame cap and radiative heat trap. The flame cap must stay hot enough ($>650^\circ\text{C}$) to burn smoke, particulate matter, and methane emitted from the pyrolyzing biomass beneath it.
-- **MIDDLE Zone**: Reflects the active pyrolyzing biomass bed. It must sustain temperatures between $450^\circ\text{C} - 650^\circ\text{C}$ to ensure high Fixed Carbon Content ($>70\%$) and high H:C atomic ratio compliance ($<0.7$).
+- **TOP Zone**: Measures the flame cap and radiative heat trap. The flame cap must stay hot enough (>650°C) to burn smoke, particulate matter, and methane emitted from the pyrolyzing biomass beneath it.
+- **MIDDLE Zone**: Reflects the active pyrolyzing biomass bed. It must sustain temperatures between 450°C - 650°C to ensure high Fixed Carbon Content (>70%) and high H:C atomic ratio compliance (<0.7).
 - **BOTTOM Zone**: Measures the accumulation and cooling zone. Cold bottoms indicate incomplete conversion or excessive heat loss through wet soil; excessively hot bottoms indicate air leakage from the bottom, causing biochar to turn into ash.
 
 ### Digital Measurement, Reporting, and Verification (dMRV)
 Under global voluntary carbon market methodologies (e.g., **Puro.earth**, **Verra VM0044**, **Carbon Standards International**), biochar carbon removal certificates (CORCs) require immutable, auditable proof that:
-1. **The pyrolysis threshold was reached and sustained**: Kiln core zones must reach at least $500^\circ\text{C} - 600^\circ\text{C}$ for a verified continuous duration.
+1. **The pyrolysis threshold was reached and sustained**: Kiln core zones must reach at least 500°C - 600°C for a verified continuous duration.
 2. **The burn took place at the certified farm or facility**: Authoritative GNSS coordinates must verify the kiln's physical location to prevent double-counting or fraudulent claiming of third-party biomass.
 3. **The timestamp is tamper-proof**: Timestamps must derive directly from atomic GNSS satellite clocks (UTC epoch), preventing operators from forging system clock dates.
 
@@ -126,16 +126,16 @@ The sensor node is powered by the **Espressif ESP32-S3-WROOM-1 / DevKitC-1 N16R8
 
 ### ESP32-S3 N16R8 SoC Specifications
 - **Core Architecture**: Dual-core 32-bit Xtensa LX7 microprocessors with 7-stage pipeline.
-- **Hardware Floating-Point Unit (FPU)**: Single-precision IEEE 754 hardware FPU. All temperature derivatives ($\frac{dT}{dt}$) and GNSS ellipsoidal coordinate conversions are calculated in single-cycle FPU instructions without software emulation.
+- **Hardware Floating-Point Unit (FPU)**: Single-precision IEEE 754 hardware FPU. All temperature derivatives (dT/dt) and GNSS ellipsoidal coordinate conversions are calculated in single-cycle FPU instructions without software emulation.
 - **Clock Frequency**: Configured to **160 MHz** via ESP-IDF Kconfig (`CONFIG_ESP32S3_DEFAULT_CPU_FREQ_160=y`).
 
 ### CPU Frequency Optimization (Why 160 MHz vs. 240 MHz)
 In CMOS digital electronics, active dynamic power dissipation is governed by:
-$$P_{\text{dynamic}} = C \cdot V_{\text{DD}}^2 \cdot f$$
+`P = C * VDD^2 * f`
 Where:
-- $C$ is the internal parasitic capacitance of the logic gates,
-- $V_{\text{DD}}$ is the core supply voltage (typically 1.1V for ESP32-S3),
-- $f$ is the clock frequency.
+- `C` is the internal parasitic capacitance of the logic gates,
+- `VDD` is the core supply voltage (typically 1.1V for ESP32-S3),
+- `f` is the clock frequency.
 
 Running the chip at its maximum 240 MHz dissipates significant heat (~1.5 Watts when radios are active). Because sensor reading occurs at 1 Hz and GNSS UART streams at 9600 baud, 240 MHz provides zero operational advantage. Dropping the clock frequency to **160 MHz** reduces dynamic CPU power dissipation by **33.3%** ($1 - \frac{160}{240}$), keeping the processor cool without dropping a single NMEA byte or BLE packet.
 
@@ -226,7 +226,7 @@ ESP32-S3 GPIO pins include internal electrostatic discharge (ESD) protection net
 > [!WARNING]
 > **5V Injection Conduction Hazard**: If a sensor module is powered from 5V (such as the 5V / VIN / VBUS USB pin), its digital output pin (`SO` or `TX`) will drive a 5V logic HIGH.
 > When a 5V signal hits an ESP32 GPIO:
-> 1. The input voltage exceeds $V_{\text{DD}} + V_{\text{forward}}$ ($3.3\text{V} + 0.6\text{V} = 3.9\text{V}$).
+> 1. The input voltage exceeds VDD + V_forward (3.3V + 0.6V = 3.9V).
 > 2. The upper ESD clamping diode becomes **forward-biased**.
 > 3. Massive parasitic current flows directly from the 5V sensor module through the internal ESP32 diode into the ESP32's 3.3V internal power rail!
 > 4. This causes the entire ESP32 silicon substrate to heat up rapidly (>70°C), triggering CMOS latchup or burning out the I/O bank.
@@ -242,7 +242,7 @@ ESP32-S3 GPIO pins include internal electrostatic discharge (ESD) protection net
 The ESP32-S3 integrates hardware SPI controllers (`SPI2` and `SPI3`). However, the MAX6675 deviates from the standard Motorola SPI specification:
 1. **Simplex Read-Only Operation**: It has no MOSI (data in) line.
 2. **Non-Standard CS Latch Cycle**: The MAX6675 initiates its internal temperature conversion precisely when `CS` transitions from LOW to HIGH. If `CS` is held LOW continuously across multiple reads, no new conversion is ever performed.
-3. **Rigid Timing Requirements**: The MAX6675 output buffer requires a microsecond propagation delay ($t_{\text{CSS}}$) after `CS` goes LOW before clock pulses can begin. Hardware SPI master DMA engines assert `CS` and `SCK` simultaneously, causing bit shifting errors.
+3. **Rigid Timing Requirements**: The MAX6675 output buffer requires a microsecond propagation delay (tCSS) after `CS` goes LOW before clock pulses can begin. Hardware SPI master DMA engines assert `CS` and `SCK` simultaneously, causing bit shifting errors.
 4. **Long Cable Capacitance**: Thermocouple breakout boards frequently use long, unshielded jumper wires. The hardware SPI peripheral minimum clock rate is often too fast, producing edge reflections. Bit-banging allows exact software control of clock speed, pin pull-ups, and channel isolation.
 
 #### Complete SPI Timing Waveform & 16-Bit Word Extraction
@@ -265,16 +265,16 @@ SO  -------------------+-------+-------+-------+-------+-----+-------+----------
 ```
 
 #### Bit-by-Bit Field Definitions
-- **Bit 15 ($D_{15}$)**: Dummy Sign Bit. Always 0. If this bit reads 1, the bus is floating or experiencing electrical noise.
-- **Bits 14 – 3 ($D_{14} - D_3$)**: 12-Bit Unsigned Integer representing temperature.
+- **Bit 15 (D15)**: Dummy Sign Bit. Always 0. If this bit reads 1, the bus is floating or experiencing electrical noise.
+- **Bits 14 – 3 (D14 - D3)**: 12-Bit Unsigned Integer representing temperature.
   - Conversion formula:
-    $$\text{Temperature}\ (^\circ\text{C}) = \left(\sum_{i=3}^{14} D_i \cdot 2^{i-3}\right) \times 0.25^\circ\text{C}$$
-  - Range: $0.00^\circ\text{C}$ (`0x000`) to $+1023.75^\circ\text{C}$ (`0xFFF`).
-- **Bit 2 ($D_2$)**: Thermocouple Open-Circuit Detect.
-  - $D_2 = 0$: Normal operation. Closed circuit through thermocouple junction.
-  - $D_2 = 1$: Open circuit. The thermocouple lead is broken, disconnected, or detached from the terminal block.
-- **Bit 1 ($D_1$)**: Device Identifier. Reserved constant 0.
-- **Bit 0 ($D_0$)**: Tri-state indicator.
+    `Temperature (°C) = (D14...D3) * 0.25°C`
+  - Range: 0.00°C (`0x000`) to +1023.75°C (`0xFFF`).
+- **Bit 2 (D2)**: Thermocouple Open-Circuit Detect.
+  - D2 = 0: Normal operation. Closed circuit through thermocouple junction.
+  - D2 = 1: Open circuit. The thermocouple lead is broken, disconnected, or detached from the terminal block.
+- **Bit 1 (D1)**: Device Identifier. Reserved constant 0.
+- **Bit 0 (D0)**: Tri-state indicator.
 
 #### The 220 ms Conversion Physics (Why Rapid Polling Destroys Data)
 The MAX6675 contains an internal integrating Delta-Sigma analog-to-digital converter. From the moment `CS` rises HIGH, the IC requires **220 milliseconds** to sample the cold junction diode, sample the thermocouple differential voltage, perform internal amplification, and write the 12-bit result to its output latch.
@@ -290,8 +290,8 @@ The MAX6675 contains an internal integrating Delta-Sigma analog-to-digital conve
 - **Interface**: Full-duplex asynchronous serial UART on ESP32 UART2.
 - **Baud Rate**: `9600 bps`.
 - **Bit Period**:
-  $$T_{\text{bit}} = \frac{1}{9600} \approx 104.167\ \mu\text{s}$$
-- **Framing**: 1 Start bit, 8 Data bits, No parity, 1 Stop bit (8N1). Total bits per character = 10 bits ($1.0416\text{ ms}$ per byte).
+  `T_bit = 1/9600 ≈ 104.167 µs`
+- **Framing**: 1 Start bit, 8 Data bits, No parity, 1 Stop bit (8N1). Total bits per character = 10 bits (1.0416 ms per byte).
 
 #### NMEA-0183 Sentence Decoding
 
@@ -308,15 +308,15 @@ The MAX6675 contains an internal integrating Delta-Sigma analog-to-digital conve
    - Field 9 & 10 (`215.4,M`): Altitude above mean sea level in meters.
 
 2. **Bitwise XOR Checksum Algorithm**:
-   Every NMEA sentence concludes with an asterisk (`*`) and a two-digit hexadecimal checksum. The checksum is computed by performing a bitwise XOR ($\oplus$) of all ASCII characters between the `$` and `*` symbols:
-   $$\text{Checksum} = \bigoplus_{i=1}^{n} \text{Character}_i$$
+   Every NMEA sentence concludes with an asterisk (`*`) and a two-digit hexadecimal checksum. The checksum is computed by performing a bitwise XOR (⊕) of all ASCII characters between the `$` and `*` symbols:
+   `Checksum = Char_1 ⊕ Char_2 ⊕ ... ⊕ Char_n`
    If the computed XOR value fails to match the transmitted hex byte, the frame was corrupted by electrical noise and is discarded.
 
 3. **Geodetic Coordinate Transformation Formula**:
    NMEA represents latitude as `DDMM.MMMM` (degrees and decimal minutes). The driver converts this into signed decimal degrees:
-   $$\text{Degrees} = \lfloor \frac{\text{raw}}{100} \rfloor$$
-   $$\text{Minutes} = \text{raw} - (\text{Degrees} \times 100)$$
-   $$\text{Decimal Degrees} = \text{Degrees} + \left(\frac{\text{Minutes}}{60.0}\right)$$
+   `Degrees = floor(raw / 100)`
+   `Minutes = raw - (Degrees * 100)`
+   `Decimal Degrees = Degrees + (Minutes / 60.0)`
    If direction is `'S'` (South) or `'W'` (West), the value is multiplied by `-1.0`.
 
 ---
@@ -337,7 +337,7 @@ ESP-IDF historically used the Bluedroid Bluetooth stack. KriSHE Carbon uses **Ap
 
 #### MTU Exchange Physics
 The default Bluetooth Core Specification Attribute Protocol (ATT) Maximum Transmission Unit (MTU) is **23 bytes**:
-$$\text{Payload} = \text{MTU} - 3\ \text{bytes header} = 20\ \text{bytes}$$
+`Payload = MTU - 3 bytes header = 20 bytes`
 Transmitting our 128-byte JSON telemetry payload across a 20-byte MTU would force link-layer packet fragmentation into 7 consecutive packets, increasing latency and packet loss.
 On BLE connection, the Android app calls `requestMtu(512)`. NimBLE responds with an MTU negotiation grant, allowing the full 128-byte JSON payload to transmit inside a **single radio burst**.
 
@@ -468,8 +468,8 @@ On BLE connection, the Android app calls `requestMtu(512)`. NimBLE responds with
   - Sets all CS pins HIGH (inactive) immediately to prevent multiple chips from driving the `SO` bus simultaneously.
 - **`max6675_read_raw_word(gpio_num_t cs_pin)`**:
   - Bit-bangs 16 clock pulses.
-  - Pulls `CS` LOW, waits $25\ \mu\text{s}$ for bus stabilization.
-  - Loops 16 times: pulls `SCK` HIGH ($10\ \mu\text{s}$), reads bit from `SO` via `gpio_get_level()`, pulls `SCK` LOW ($10\ \mu\text{s}$).
+  - Pulls `CS` LOW, waits 25 µs for bus stabilization.
+  - Loops 16 times: pulls `SCK` HIGH (10 µs), reads bit from `SO` via `gpio_get_level()`, pulls `SCK` LOW (10 µs).
   - Pulls `CS` HIGH. Returns the raw `uint16_t` word.
 - **`max6675_sample_all(void)`**:
   - Reads TOP (CS 7), waits 20 ms settling delay.
@@ -520,8 +520,8 @@ On BLE connection, the Android app calls `requestMtu(512)`. NimBLE responds with
 ### 6. Thread-Safe Telemetry Model (`src/data_model.h`, `src/data_model.c`)
 
 - **`data_model_update_sensors(...)`**:
-  - Calculates temperature derivatives ($\Delta T / \Delta t$) for Top, Middle, and Bottom zones:
-    $$\text{rate} = \frac{T_{\text{current}} - T_{\text{previous}}}{\Delta t}$$
+  - Calculates temperature derivatives (ΔT / Δt) for Top, Middle, and Bottom zones:
+    `rate = (T_current - T_previous) / Δt`
   - Locks `s_mutex`, updates state values, and releases `s_mutex`.
 - **`data_model_get_snapshot(void)`**:
   - Locks `s_mutex`, performs a sub-microsecond memory copy (`memcpy`) of `device_state_t`, releases `s_mutex`, and returns the snapshot by value.
@@ -627,7 +627,7 @@ idf_component_register(SRCS "src/main.c" "src/max6675.c" "src/gnss.c" "src/kiln_
 Custom Android View extending `android.view.View`:
 - **Rolling Window**: Holds a rolling circular buffer of 80 seconds of samples.
 - **Dynamic Auto-Scaling Algorithm**:
-  $$\text{Scale}_Y = \frac{H - \text{Padding}}{\max(T_{\text{max}} - T_{\text{min}}, 10.0)}$$
+  `ScaleY = (Height - Padding) / max(T_max - T_min, 10.0)`
 - **Cubic Bezier Spline Interpolation**: Curves are drawn using smooth cubic Bezier paths (`cubicTo`), eliminating jagged step-line rendering.
 - **Interactive Probe Filter Chips**: Top, Middle, and Bottom probe traces can be independently hidden or displayed.
 - **Pulsing Head Glow**: Leading data points feature a multi-layer radial gradient glow to indicate active streaming.
@@ -663,7 +663,7 @@ Custom Android View extending `android.view.View`:
 
 ### Calibration, Diagnostics & Alerts (`SettingsFragment.kt`)
 - **Temperature Unit Conversion**: Toggle between Celsius (°C) and Fahrenheit (°F) with immediate re-rendering across charts, logs, and dashboard.
-- **Thermocouple Zero-Offset Calibration**: Independent offsets ($\pm 10.0^\circ\text{C}$) for Top, Middle, and Bottom channels to compensate for thermocouple aging or wire resistance.
+- **Thermocouple Zero-Offset Calibration**: Independent offsets (± 10.0°C) for Top, Middle, and Bottom channels to compensate for thermocouple aging or wire resistance.
 - **Wi-Fi Ping Diagnostic**: Issues an HTTP GET request to `http://192.168.4.1/api/status` and displays round-trip network latency.
 - **Vibration Alerts**: Triggers haptic phone vibration when the kiln transitions to `ACTIVE` (>60°C) or enters `COOLDOWN`.
 - **Database Wipe**: Secure option to clear historical SQLite records before a new testing run.

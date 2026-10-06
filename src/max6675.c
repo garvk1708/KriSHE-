@@ -7,19 +7,18 @@
 
 static const char *TAG = "MAX6675";
 
-/* Tracking for rate of change calculation (dT/dt) */
+/* Tracking for rate of change calculation (dT/dt) and EMA */
 static int64_t s_last_timestamp_us = 0;
-static float s_last_top_c = 0.0f;
-static float s_last_mid_c = 0.0f;
-static float s_last_bot_c = 0.0f;
-static bool s_has_prev_top = false;
-static bool s_has_prev_mid = false;
-static bool s_has_prev_bot = false;
 
-/* Rejection counters to prevent permanent freezing */
-static int s_top_rejection_count = 0;
-static int s_mid_rejection_count = 0;
-static int s_bot_rejection_count = 0;
+typedef struct {
+    float last_c;
+    bool has_prev;
+    int rejection_count;
+} channel_state_t;
+
+static channel_state_t s_top_state = {0};
+static channel_state_t s_mid_state = {0};
+static channel_state_t s_bot_state = {0};
 
 esp_err_t max6675_init(void)
 {
@@ -106,7 +105,7 @@ static uint16_t max6675_read_raw_internal(gpio_num_t cs_pin)
     return raw;
 }
 
-max6675_reading_t max6675_read_channel(gpio_num_t cs_pin)
+static max6675_reading_t max6675_read_channel_once(gpio_num_t cs_pin)
 {
     max6675_reading_t reading = {
         .temperature_c = 0.0f,
@@ -118,17 +117,8 @@ max6675_reading_t max6675_read_channel(gpio_num_t cs_pin)
     uint16_t raw = max6675_read_raw_internal(cs_pin);
     reading.raw_value = raw;
 
-    /*
-     * MAX6675 Bit Format:
-     * D15: Dummy sign bit (ALWAYS 0)
-     * D14..D3: 12-bit temperature (0.25°C / LSB)
-     * D2:  Input Open indicator (1 = Open/Fault, 0 = Closed)
-     * D1:  Device ID (0)
-     * D0:  Three-state
-     */
-
-    if (raw == 0xFFFF || raw == 0x0000 || (raw & 0x8000)) {
-        /* Bus floating (0xFFFF), shorted to GND (0x0000), or invalid D15 bit */
+    if (raw == 0xFFFF || raw == 0x0000) {
+        /* Bus floating (0xFFFF) or shorted to GND (0x0000) */
         reading.is_open = true;
         reading.valid = false;
         reading.temperature_c = 0.0f;
@@ -148,8 +138,8 @@ max6675_reading_t max6675_read_channel(gpio_num_t cs_pin)
     reading.temperature_c = (float)temp_val * 0.25f;
     reading.is_open = false;
 
-    /* Range check: MAX6675 range is 0.0°C to 1024.0°C */
-    if (reading.temperature_c >= 0.0f && reading.temperature_c <= 1024.0f) {
+    /* Range check: Valid thermocouple temperature is > 0.0°C and <= 1024.0°C */
+    if (temp_val > 0 && reading.temperature_c <= 1024.0f) {
         reading.valid = true;
     } else {
         reading.valid = false;
@@ -158,34 +148,70 @@ max6675_reading_t max6675_read_channel(gpio_num_t cs_pin)
     return reading;
 }
 
+max6675_reading_t max6675_read_channel(gpio_num_t cs_pin)
+{
+    max6675_reading_t reading = {0};
+    for (int retry = 0; retry < 3; retry++) {
+        reading = max6675_read_channel_once(cs_pin);
+        if (reading.valid) {
+            return reading;
+        }
+        /* 2ms settling delay between retries */
+        esp_rom_delay_us(2000);
+    }
+    return reading;
+}
+
+static void process_channel_reading(max6675_reading_t *reading, channel_state_t *state, float *out_c, bool *out_valid, bool *out_open)
+{
+    if (reading->valid) {
+        if (state->has_prev) {
+            /* Outlier jump rejection (>60°C spike) */
+            if (fabsf(reading->temperature_c - state->last_c) > 60.0f && state->rejection_count < 3) {
+                *out_c = state->last_c;
+                state->rejection_count++;
+            } else {
+                /* Apply Exponential Moving Average (EMA) smoothing: 70% history, 30% new */
+                float smoothed = (0.7f * state->last_c) + (0.3f * reading->temperature_c);
+                state->last_c = smoothed;
+                *out_c = smoothed;
+                state->rejection_count = 0;
+            }
+        } else {
+            state->last_c = reading->temperature_c;
+            state->has_prev = true;
+            *out_c = reading->temperature_c;
+            state->rejection_count = 0;
+        }
+        *out_valid = true;
+        *out_open = false;
+    } else {
+        /* Hold previous valid value for up to 3 consecutive failed samples */
+        if (state->has_prev && state->rejection_count < 3) {
+            state->rejection_count++;
+            *out_c = state->last_c;
+            *out_valid = true;
+            *out_open = false;
+        } else {
+            *out_c = 0.0f;
+            *out_valid = false;
+            *out_open = reading->is_open;
+            state->has_prev = false;
+            state->rejection_count = 0;
+        }
+    }
+}
+
 temperature_sample_t max6675_sample_all(void)
 {
     temperature_sample_t sample = {0};
     sample.timestamp_us = esp_timer_get_time();
 
-    /* 1. Read TOP Channel */
 #if MAX6675_ENABLE_TOP
     max6675_reading_t top = max6675_read_channel(MAX6675_TOP_CS_PIN);
-    if (top.valid) {
-        if (s_has_prev_top && fabsf(top.temperature_c - s_last_top_c) > 60.0f && s_top_rejection_count < 2) {
-            /* Single outlier rejection: hold previous value for at most 2 samples */
-            sample.top_c = s_last_top_c;
-            sample.top_valid = true;
-            sample.top_open = false;
-            s_top_rejection_count++;
-        } else {
-            sample.top_c = top.temperature_c;
-            sample.top_valid = true;
-            sample.top_open = false;
-            s_top_rejection_count = 0;
-        }
-    } else {
-        sample.top_c = 0.0f;
-        sample.top_valid = false;
-        sample.top_open = top.is_open;
-        s_top_rejection_count = 0;
-    }
+    process_channel_reading(&top, &s_top_state, &sample.top_c, &sample.top_valid, &sample.top_open);
 #else
+    max6675_reading_t top = {0};
     sample.top_c = 0.0f;
     sample.top_valid = false;
     sample.top_open = true;
@@ -194,28 +220,11 @@ temperature_sample_t max6675_sample_all(void)
     /* 20 ms bus settling time between channels */
     esp_rom_delay_us(20000);
 
-    /* 2. Read MIDDLE Channel */
 #if MAX6675_ENABLE_MID
     max6675_reading_t mid = max6675_read_channel(MAX6675_MID_CS_PIN);
-    if (mid.valid) {
-        if (s_has_prev_mid && fabsf(mid.temperature_c - s_last_mid_c) > 60.0f && s_mid_rejection_count < 2) {
-            sample.middle_c = s_last_mid_c;
-            sample.middle_valid = true;
-            sample.middle_open = false;
-            s_mid_rejection_count++;
-        } else {
-            sample.middle_c = mid.temperature_c;
-            sample.middle_valid = true;
-            sample.middle_open = false;
-            s_mid_rejection_count = 0;
-        }
-    } else {
-        sample.middle_c = 0.0f;
-        sample.middle_valid = false;
-        sample.middle_open = mid.is_open;
-        s_mid_rejection_count = 0;
-    }
+    process_channel_reading(&mid, &s_mid_state, &sample.middle_c, &sample.middle_valid, &sample.middle_open);
 #else
+    max6675_reading_t mid = {0};
     sample.middle_c = 0.0f;
     sample.middle_valid = false;
     sample.middle_open = true;
@@ -224,82 +233,47 @@ temperature_sample_t max6675_sample_all(void)
     /* 20 ms bus settling time between channels */
     esp_rom_delay_us(20000);
 
-    /* 3. Read BOTTOM Channel */
 #if MAX6675_ENABLE_BOT
     max6675_reading_t bot = max6675_read_channel(MAX6675_BOT_CS_PIN);
-    if (bot.valid) {
-        if (s_has_prev_bot && fabsf(bot.temperature_c - s_last_bot_c) > 60.0f && s_bot_rejection_count < 2) {
-            sample.bottom_c = s_last_bot_c;
-            sample.bottom_valid = true;
-            sample.bottom_open = false;
-            s_bot_rejection_count++;
-        } else {
-            sample.bottom_c = bot.temperature_c;
-            sample.bottom_valid = true;
-            sample.bottom_open = false;
-            s_bot_rejection_count = 0;
-        }
-    } else {
-        sample.bottom_c = 0.0f;
-        sample.bottom_valid = false;
-        sample.bottom_open = bot.is_open;
-        s_bot_rejection_count = 0;
-    }
+    process_channel_reading(&bot, &s_bot_state, &sample.bottom_c, &sample.bottom_valid, &sample.bottom_open);
 #else
+    max6675_reading_t bot = {0};
     sample.bottom_c = 0.0f;
     sample.bottom_valid = false;
     sample.bottom_open = true;
 #endif
 
+    ESP_LOGI(TAG, "RAW SPI READINGS -> TOP(CS7): 0x%04X (valid=%d), MID(CS15): 0x%04X (valid=%d), BOT(CS16): 0x%04X (valid=%d)",
+             top.raw_value, sample.top_valid,
+             mid.raw_value, sample.middle_valid,
+             bot.raw_value, sample.bottom_valid);
+
     /* Calculate rates of change (dT/dt in °C/s) */
     if (s_last_timestamp_us > 0) {
         float dt_s = (float)(sample.timestamp_us - s_last_timestamp_us) / 1000000.0f;
+        
+        /* Cap dt_s to prevent extreme rate spikes if task gets starved */
+        if (dt_s > 5.0f) {
+            dt_s = 5.0f; 
+        }
+
         if (dt_s > 0.05f) {
-            if (sample.top_valid && s_has_prev_top) {
-                float diff = sample.top_c - s_last_top_c;
+            if (sample.top_valid && s_top_state.has_prev) {
+                float diff = sample.top_c - s_top_state.last_c;
                 sample.top_rate = (fabsf(diff) > 30.0f) ? 0.0f : (diff / dt_s);
-            } else {
-                sample.top_rate = 0.0f;
             }
-
-            if (sample.middle_valid && s_has_prev_mid) {
-                float diff = sample.middle_c - s_last_mid_c;
+            if (sample.middle_valid && s_mid_state.has_prev) {
+                float diff = sample.middle_c - s_mid_state.last_c;
                 sample.middle_rate = (fabsf(diff) > 30.0f) ? 0.0f : (diff / dt_s);
-            } else {
-                sample.middle_rate = 0.0f;
             }
-
-            if (sample.bottom_valid && s_has_prev_bot) {
-                float diff = sample.bottom_c - s_last_bot_c;
+            if (sample.bottom_valid && s_bot_state.has_prev) {
+                float diff = sample.bottom_c - s_bot_state.last_c;
                 sample.bottom_rate = (fabsf(diff) > 30.0f) ? 0.0f : (diff / dt_s);
-            } else {
-                sample.bottom_rate = 0.0f;
             }
         }
     }
 
-    /* Update history for next iteration */
     s_last_timestamp_us = sample.timestamp_us;
-    if (sample.top_valid) {
-        s_last_top_c = sample.top_c;
-        s_has_prev_top = true;
-    } else {
-        s_has_prev_top = false;
-    }
-
-    if (sample.middle_valid) {
-        s_last_mid_c = sample.middle_c;
-        s_has_prev_mid = true;
-    } else {
-        s_has_prev_mid = false;
-    }
-
-    if (sample.bottom_valid) {
-        s_last_bot_c = sample.bottom_c;
-        s_has_prev_bot = true;
-    } else {
-        s_has_prev_bot = false;
-    }
 
     return sample;
 }

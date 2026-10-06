@@ -35,6 +35,8 @@ class BleManager(private val context: Context) {
     private var gatt: BluetoothGatt? = null
     private var isScanning = false
     private val discoveredAddresses = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
+    private val scanStopHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val scanStopRunnable = Runnable { stopScan() }
 
     var onDeviceFound: ((ScannedDevice) -> Unit)? = null
     var onTelemetryReceived: ((TelemetryData) -> Unit)? = null
@@ -42,7 +44,15 @@ class BleManager(private val context: Context) {
     var onScanFinished: (() -> Unit)? = null
 
     val isConnected: Boolean
-        get() = gatt != null
+        get() {
+            val currentGatt = gatt ?: return false
+            return try {
+                bluetoothManager.getConnectionState(currentGatt.device, android.bluetooth.BluetoothProfile.GATT) ==
+                    android.bluetooth.BluetoothProfile.STATE_CONNECTED
+            } catch (e: Exception) {
+                false
+            }
+        }
 
     private fun hasScanPermission(): Boolean {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -87,10 +97,10 @@ class BleManager(private val context: Context) {
             scanner?.startScan(emptyList(), settings, scanCallback)
             Log.i(TAG, "BLE scan started (filtering in software callback)")
 
-            // Auto-stop after SCAN_DURATION_MS
-            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                stopScan()
-            }, SCAN_DURATION_MS)
+            // Auto-stop after SCAN_DURATION_MS — stored as a named Runnable so it can
+            // be cancelled in destroy() before it fires on a destroyed instance.
+            scanStopHandler.removeCallbacks(scanStopRunnable)
+            scanStopHandler.postDelayed(scanStopRunnable, SCAN_DURATION_MS)
         } catch (e: SecurityException) {
             Log.e(TAG, "SecurityException during startScan: ${e.message}")
             isScanning = false
@@ -270,7 +280,8 @@ class BleManager(private val context: Context) {
         override fun onCharacteristicChanged(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
             if (characteristic.uuid == CHAR_UUID || characteristic.uuid.toString().lowercase().contains("ffe1")) {
                 @Suppress("DEPRECATION")
-                val payload = characteristic.value?.toString(Charsets.UTF_8) ?: return
+                val bytes = characteristic.value ?: return
+                val payload = String(bytes, Charsets.UTF_8)
                 parseTelemetry(payload)
             }
         }
@@ -281,7 +292,7 @@ class BleManager(private val context: Context) {
             value: ByteArray
         ) {
             if (characteristic.uuid == CHAR_UUID || characteristic.uuid.toString().lowercase().contains("ffe1")) {
-                val payload = value.toString(Charsets.UTF_8)
+                val payload = String(value, Charsets.UTF_8)
                 parseTelemetry(payload)
             }
         }
@@ -292,24 +303,21 @@ class BleManager(private val context: Context) {
             Log.d(TAG, "Received telemetry: $jsonStr")
             val json = JSONObject(jsonStr)
 
-            // Support both top_v (int/bool) and top_valid
-            val topValid = if (json.has("top_v")) {
-                json.optInt("top_v", 0) == 1
-            } else {
-                json.optBoolean("top_valid", json.optDouble("top", 0.0) != 0.0)
+            fun JSONObject.optFuzzyBoolean(keyV: String, keyValid: String, keyFallback: String): Boolean {
+                return if (has(keyV)) {
+                    optInt(keyV, 0) == 1
+                } else {
+                    optBoolean(keyValid, optDouble(keyFallback, 0.0) != 0.0)
+                }
             }
 
-            val midValid = if (json.has("mid_v")) {
-                json.optInt("mid_v", 0) == 1
-            } else {
-                json.optBoolean("mid_valid", json.optDouble("mid", 0.0) != 0.0)
-            }
+            val topValid = json.optFuzzyBoolean("top_v", "top_valid", "top")
+            val midValid = json.optFuzzyBoolean("mid_v", "mid_valid", "mid")
+            val botValid = json.optFuzzyBoolean("bot_v", "bot_valid", "bot")
 
-            val botValid = if (json.has("bot_v")) {
-                json.optInt("bot_v", 0) == 1
-            } else {
-                json.optBoolean("bot_valid", json.optDouble("bot", 0.0) != 0.0)
-            }
+            val topOpen = json.optInt("top_open", 0) == 1 || json.optBoolean("top_open", false)
+            val midOpen = json.optInt("mid_open", 0) == 1 || json.optBoolean("middle_open", false)
+            val botOpen = json.optInt("bot_open", 0) == 1 || json.optBoolean("bottom_open", false)
 
             val lat = json.optDouble("lat", 0.0)
             val lon = json.optDouble("lon", 0.0)
@@ -323,10 +331,17 @@ class BleManager(private val context: Context) {
                 topValid = topValid,
                 midValid = midValid,
                 botValid = botValid,
+                topOpen = topOpen,
+                midOpen = midOpen,
+                botOpen = botOpen,
+                topRate = json.optDouble("top_rate", 0.0).toFloat(),
+                midRate = json.optDouble("mid_rate", 0.0).toFloat(),
+                botRate = json.optDouble("bot_rate", 0.0).toFloat(),
                 latitude = lat,
                 longitude = lon,
                 gpsValid = gpsValid,
                 satellites = json.optInt("sat", 0),
+                utcEpoch = json.optLong("utc", 0L),
                 uptime = json.optLong("up", json.optLong("uptime", json.optLong("uptime_s", json.optLong("duration", 0L)))),
                 batchId = json.optString("batch_id", "NONE"),
                 batchDuration = json.optLong("duration", 0L)
@@ -338,6 +353,7 @@ class BleManager(private val context: Context) {
     }
 
     fun destroy() {
+        scanStopHandler.removeCallbacks(scanStopRunnable)
         stopScan()
         disconnect()
     }

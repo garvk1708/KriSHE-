@@ -5,7 +5,7 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
-@Database(entities = [Session::class, TelemetrySample::class], version = 1, exportSchema = false)
+@Database(entities = [Session::class, TelemetrySample::class], version = 2, exportSchema = false)
 abstract class SessionDatabase : RoomDatabase() {
 
     abstract fun sessionDao(): SessionDao
@@ -20,7 +20,7 @@ abstract class SessionDatabase : RoomDatabase() {
                     context.applicationContext,
                     SessionDatabase::class.java,
                     "krishe_carbon_db"
-                ).build()
+                ).fallbackToDestructiveMigration().build()
                 INSTANCE = instance
                 instance
             }

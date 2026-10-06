@@ -116,6 +116,7 @@ static void parse_rmc(char *sentence)
                 s_latest_fix.longitude = 0.0;
                 s_latest_fix.time_valid = false;
                 strncpy(s_latest_fix.utc_str, "SEARCHING / NO FIX", sizeof(s_latest_fix.utc_str) - 1);
+                s_latest_fix.utc_str[sizeof(s_latest_fix.utc_str) - 1] = '\0';
             }
         }
         xSemaphoreGive(s_gnss_mutex);

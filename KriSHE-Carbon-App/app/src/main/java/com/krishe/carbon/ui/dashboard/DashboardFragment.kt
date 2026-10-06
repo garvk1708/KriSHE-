@@ -59,9 +59,8 @@ class DashboardFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Start live IST clock ticker
-        clockHandler.removeCallbacks(clockRunnable)
-        clockHandler.post(clockRunnable)
+        // NOTE: The IST clock is started in onResume() and stopped in onPause()
+        // to keep it lifecycle-correct and prevent double-ticking.
 
         // Quick jump back to Scanner/Devices
         binding.btnQuickScanner.setOnClickListener {
@@ -226,6 +225,22 @@ class DashboardFragment : Fragment() {
         } else {
             "${secs}s"
         }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        // Stop the clock tick while the fragment is not visible.
+        // This prevents accumulated postDelayed calls causing double-ticking
+        // when the fragment comes back into view, which is the root cause of
+        // the time display fluctuation the user observes.
+        clockHandler.removeCallbacks(clockRunnable)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Restart the clock exactly once on resume — no double-posting.
+        clockHandler.removeCallbacks(clockRunnable)
+        clockHandler.post(clockRunnable)
     }
 
     override fun onDestroyView() {

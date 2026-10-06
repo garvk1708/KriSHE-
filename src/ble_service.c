@@ -20,6 +20,23 @@ static uint16_t s_char_val_handle = 0;
 static bool s_notify_enabled = false;
 static uint8_t s_own_addr_type;
 
+static void build_ble_json_payload(const device_state_t *st, char *buf, size_t size)
+{
+    snprintf(buf, size,
+             "{\"state\":\"%s\",\"top\":%.2f,\"mid\":%.2f,\"bot\":%.2f,\"top_v\":%d,\"mid_v\":%d,\"bot_v\":%d,\"top_open\":%d,\"mid_open\":%d,\"bot_open\":%d,\"lat\":%.6f,\"lon\":%.6f,\"sat\":%u,\"utc\":%lld,\"top_rate\":%.2f,\"mid_rate\":%.2f,\"bot_rate\":%.2f,\"batch_id\":\"%s\",\"duration\":%lu,\"up\":%lu}",
+             kiln_state_to_str(st->kiln_state),
+             st->top_c, st->middle_c, st->bottom_c,
+             st->top_valid ? 1 : 0, st->middle_valid ? 1 : 0, st->bottom_valid ? 1 : 0,
+             st->top_open ? 1 : 0, st->middle_open ? 1 : 0, st->bottom_open ? 1 : 0,
+             st->latitude, st->longitude,
+             (unsigned int)st->satellites,
+             (long long)st->utc_epoch,
+             st->top_rate, st->middle_rate, st->bottom_rate,
+             st->batch_id,
+             (unsigned long)st->session_duration_s,
+             (unsigned long)st->uptime_s);
+}
+
 static int ble_gap_event(struct ble_gap_event *event, void *arg);
 
 static int ble_chr_access(uint16_t conn_handle, uint16_t attr_handle,
@@ -27,19 +44,8 @@ static int ble_chr_access(uint16_t conn_handle, uint16_t attr_handle,
 {
     if (ctxt->op == BLE_GATT_ACCESS_OP_READ_CHR) {
         device_state_t st = data_model_get_snapshot();
-        char buf[256];
-        snprintf(buf, sizeof(buf),
-                 "{\"state\":\"%s\",\"top\":%.2f,\"mid\":%.2f,\"bot\":%.2f,\"top_v\":%d,\"mid_v\":%d,\"bot_v\":%d,\"lat\":%.6f,\"lon\":%.6f,\"sat\":%u,\"utc\":%lld,\"rate\":%.2f,\"batch_id\":\"%s\",\"duration\":%lu,\"up\":%lu}",
-                 kiln_state_to_str(st.kiln_state),
-                 st.top_c, st.middle_c, st.bottom_c,
-                 st.top_valid ? 1 : 0, st.middle_valid ? 1 : 0, st.bottom_valid ? 1 : 0,
-                 st.latitude, st.longitude,
-                 (unsigned int)st.satellites,
-                 (long long)st.utc_epoch,
-                 st.top_rate,
-                 st.batch_id,
-                 (unsigned long)st.session_duration_s,
-                 (unsigned long)st.uptime_s);
+        char buf[512];
+        build_ble_json_payload(&st, buf, sizeof(buf));
         os_mbuf_append(ctxt->om, buf, strlen(buf));
         return 0;
     }
@@ -114,8 +120,6 @@ static int ble_gap_event(struct ble_gap_event *event, void *arg)
         ESP_LOGI(TAG, "BLE Connect: status=%d", event->connect.status);
         if (event->connect.status == 0) {
             s_conn_handle = event->connect.conn_handle;
-            /* Turn off Wi-Fi SoftAP and web server to reduce heat and save power while app is connected */
-            wifi_stop_softap();
         } else {
             ble_advertise();
         }
@@ -125,8 +129,6 @@ static int ble_gap_event(struct ble_gap_event *event, void *arg)
         ESP_LOGI(TAG, "BLE Disconnect; reason=%d", event->disconnect.reason);
         s_conn_handle = BLE_HS_CONN_HANDLE_NONE;
         s_notify_enabled = false;
-        /* Turn Wi-Fi back on when app disconnects so web dashboard remains accessible */
-        wifi_resume_softap();
         ble_advertise();
         return 0;
 
@@ -217,19 +219,10 @@ void ble_service_notify_state(const device_state_t *st)
         return;
     }
 
-    char buf[256];
-    int len = snprintf(buf, sizeof(buf),
-             "{\"state\":\"%s\",\"top\":%.2f,\"mid\":%.2f,\"bot\":%.2f,\"top_v\":%d,\"mid_v\":%d,\"bot_v\":%d,\"lat\":%.6f,\"lon\":%.6f,\"sat\":%u,\"utc\":%lld,\"rate\":%.2f,\"batch_id\":\"%s\",\"duration\":%lu,\"up\":%lu}",
-             kiln_state_to_str(st->kiln_state),
-             st->top_c, st->middle_c, st->bottom_c,
-             st->top_valid ? 1 : 0, st->middle_valid ? 1 : 0, st->bottom_valid ? 1 : 0,
-             st->latitude, st->longitude,
-             (unsigned int)st->satellites,
-             (long long)st->utc_epoch,
-             st->top_rate,
-             st->batch_id,
-             (unsigned long)st->session_duration_s,
-             (unsigned long)st->uptime_s);
+    char buf[512];
+    build_ble_json_payload(st, buf, sizeof(buf));
+
+    int len = strlen(buf);
 
     if (len > 0) {
         struct os_mbuf *om = ble_hs_mbuf_from_flat(buf, len);

@@ -31,6 +31,11 @@ class KrisheWifiManager(private val context: Context) {
     private var networkCallback: ConnectivityManager.NetworkCallback? = null
     private var hasReportedConnected = false
 
+    /* Single long-lived scope for all polling coroutines. Cancelled in destroy()
+     * so no coroutines outlive the manager. Previously a new scope was created on
+     * every startPolling() call, leaking the old scope even after stopPolling(). */
+    private val pollingScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
     private val httpClient = OkHttpClient.Builder()
         .connectTimeout(3, TimeUnit.SECONDS)
         .readTimeout(3, TimeUnit.SECONDS)
@@ -135,7 +140,7 @@ class KrisheWifiManager(private val context: Context) {
 
     private fun startPolling(network: Network?) {
         stopPolling()
-        pollingJob = CoroutineScope(Dispatchers.IO).launch {
+        pollingJob = pollingScope.launch {
             while (isActive) {
                 try {
                     val client = if (network != null) {
@@ -246,5 +251,6 @@ class KrisheWifiManager(private val context: Context) {
 
     fun destroy() {
         disconnect()
+        pollingScope.cancel()
     }
 }

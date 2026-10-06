@@ -41,12 +41,10 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Initialize settings & managers
         settings = com.krishe.carbon.data.KrisheSettings(this)
         bleManager = BleManager(this)
         wifiManager = KrisheWifiManager(this)
 
-        // Wire up telemetry callbacks
         bleManager.onTelemetryReceived = { data ->
             runOnUiThread { telemetryLive.value = data }
         }
@@ -55,6 +53,11 @@ class MainActivity : AppCompatActivity() {
                 connectionState.value = connected
                 connectionMode.value = if (connected) "BLE" else ""
                 checkAutoNavigateToDashboard(connected)
+                if (connected) {
+                    TelemetryService.start(this)
+                } else {
+                    TelemetryService.stop(this)
+                }
             }
         }
 
@@ -66,15 +69,18 @@ class MainActivity : AppCompatActivity() {
                 connectionState.value = connected
                 connectionMode.value = if (connected) "Wi-Fi" else ""
                 checkAutoNavigateToDashboard(connected)
+                if (connected) {
+                    TelemetryService.start(this)
+                } else {
+                    TelemetryService.stop(this)
+                }
             }
         }
 
-        // Global background recording persistence across all fragments
         telemetryLive.observe(this) { data ->
             com.krishe.carbon.data.RecordingManager.recordSample(this, data)
         }
 
-        // Setup navigation with explicit backstack-safe handling
         val navHostFragment = supportFragmentManager
             .findFragmentById(R.id.navHostFragment) as NavHostFragment
         val navController = navHostFragment.navController
@@ -94,7 +100,6 @@ class MainActivity : AppCompatActivity() {
             true
         }
 
-        // Keep bottom navigation item selection synchronized with current fragment
         navController.addOnDestinationChangedListener { _, destination, _ ->
             val menuItem = binding.bottomNav.menu.findItem(destination.id)
             if (menuItem != null && !menuItem.isChecked) {
@@ -111,7 +116,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Observe connection state for the status bar
         connectionState.observe(this) { connected ->
             if (connected) {
                 binding.connectionDot.setBackgroundResource(R.drawable.ic_dot_connected)
@@ -126,10 +130,8 @@ class MainActivity : AppCompatActivity() {
             binding.connectionMode.text = mode
         }
 
-        // Request permissions
         requestPermissions()
 
-        // Start live IST clock
         startClock()
     }
 
@@ -161,12 +163,41 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                needed.add(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             needed.add(Manifest.permission.ACCESS_FINE_LOCATION)
         }
 
         if (needed.isNotEmpty()) {
             permissionLauncher.launch(needed.toTypedArray())
+        } else {
+            promptEnableBluetooth()
+        }
+    }
+
+    private fun promptEnableBluetooth() {
+        val btManager = getSystemService(android.content.Context.BLUETOOTH_SERVICE) as? android.bluetooth.BluetoothManager
+        val btAdapter = btManager?.adapter
+        if (btAdapter != null && !btAdapter.isEnabled) {
+            val enableBtIntent = android.content.Intent(android.bluetooth.BluetoothAdapter.ACTION_REQUEST_ENABLE)
+            btEnableLauncher.launch(enableBtIntent)
+        }
+    }
+
+    private val btEnableLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode != android.app.Activity.RESULT_OK) {
+            com.google.android.material.snackbar.Snackbar.make(
+                binding.root,
+                "Bluetooth is required to connect to the kiln.",
+                com.google.android.material.snackbar.Snackbar.LENGTH_LONG
+            ).show()
         }
     }
 
@@ -181,6 +212,8 @@ class MainActivity : AppCompatActivity() {
                 "Some permissions were denied. BLE scanning may not work.",
                 com.google.android.material.snackbar.Snackbar.LENGTH_LONG
             ).show()
+        } else {
+            promptEnableBluetooth()
         }
     }
 
@@ -208,6 +241,7 @@ class MainActivity : AppCompatActivity() {
         connectionState.value = false
         connectionMode.value = ""
         navigateToDashboardOnConnect = false
+        TelemetryService.stop(this)
     }
 
     override fun onDestroy() {

@@ -21,10 +21,14 @@ esp_err_t data_model_init(void)
 
     memset(&s_device_state, 0, sizeof(s_device_state));
     strncpy(s_device_state.name, DEVICE_NAME, sizeof(s_device_state.name) - 1);
+    s_device_state.name[sizeof(s_device_state.name) - 1] = '\0';
     strncpy(s_device_state.firmware, FIRMWARE_VERSION, sizeof(s_device_state.firmware) - 1);
+    s_device_state.firmware[sizeof(s_device_state.firmware) - 1] = '\0';
     s_device_state.kiln_state = KILN_STATE_IDLE;
     strncpy(s_device_state.utc_str, "UNAVAILABLE", sizeof(s_device_state.utc_str) - 1);
+    s_device_state.utc_str[sizeof(s_device_state.utc_str) - 1] = '\0';
     strncpy(s_device_state.batch_id, "NONE", sizeof(s_device_state.batch_id) - 1);
+    s_device_state.batch_id[sizeof(s_device_state.batch_id) - 1] = '\0';
 
     ESP_LOGI(TAG, "Central data model initialized successfully");
     return ESP_OK;
@@ -71,7 +75,9 @@ void data_model_update_gnss(const gnss_fix_t *fix)
         s_device_state.gnss_sentences = fix->sentences_received;
         s_device_state.utc_epoch = fix->utc_epoch;
         strncpy(s_device_state.utc_str, fix->utc_str, sizeof(s_device_state.utc_str) - 1);
+        s_device_state.utc_str[sizeof(s_device_state.utc_str) - 1] = '\0';
         strncpy(s_device_state.last_nmea, fix->last_nmea, sizeof(s_device_state.last_nmea) - 1);
+        s_device_state.last_nmea[sizeof(s_device_state.last_nmea) - 1] = '\0';
         xSemaphoreGive(s_data_mutex);
     }
 }
@@ -85,6 +91,7 @@ void data_model_update_kiln(kiln_state_t state, const kiln_session_t *session)
         if (session) {
             strncpy(s_device_state.batch_id, session->batch_id[0] ? session->batch_id : "NONE",
                     sizeof(s_device_state.batch_id) - 1);
+            s_device_state.batch_id[sizeof(s_device_state.batch_id) - 1] = '\0';
             s_device_state.session_active = session->is_active;
             s_device_state.session_duration_s = session->duration_s;
         }

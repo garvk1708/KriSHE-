@@ -19,9 +19,7 @@ static const char *TAG = "MAIN";
 
 static QueueHandle_t s_temp_queue = NULL;
 
-/* -------------------------------------------------------------------------
- * TASK 1: Sensor Task (1 Hz sequential MAX6675 acquisition)
- * ------------------------------------------------------------------------- */
+/* Sensor Task (1 Hz sequential MAX6675 acquisition) */
 static void sensor_task(void *pvParameters)
 {
     ESP_LOGI(TAG, "Sensor task started on core %d", xPortGetCoreID());
@@ -47,9 +45,7 @@ static void sensor_task(void *pvParameters)
     }
 }
 
-/* -------------------------------------------------------------------------
- * TASK 2: GNSS Task (Continuous NMEA streaming and parsing)
- * ------------------------------------------------------------------------- */
+/* GNSS Task (Continuous NMEA streaming and parsing) */
 static void gnss_task(void *pvParameters)
 {
     ESP_LOGI(TAG, "GNSS task started on core %d", xPortGetCoreID());
@@ -87,9 +83,7 @@ static float get_internal_chip_temp(void)
     return tsens;
 }
 
-/* -------------------------------------------------------------------------
- * Helper: Print Periodic Formatted Serial Diagnostic Block (Every 3 seconds)
- * ------------------------------------------------------------------------- */
+/* Helper: Print Periodic Formatted Serial Diagnostic Block (Every 3 seconds) */
 static void print_serial_diagnostics(const device_state_t *st)
 {
     float die_temp = get_internal_chip_temp();
@@ -154,9 +148,7 @@ static void print_serial_diagnostics(const device_state_t *st)
     fflush(stdout);
 }
 
-/* -------------------------------------------------------------------------
- * TASK 3: State & Data Processing Task
- * ------------------------------------------------------------------------- */
+/* State & Data Processing Task */
 static void state_task(void *pvParameters)
 {
     ESP_LOGI(TAG, "State & Data processing task started on core %d", xPortGetCoreID());
@@ -192,9 +184,7 @@ static void state_task(void *pvParameters)
     }
 }
 
-/* -------------------------------------------------------------------------
- * Application Entry Point
- * ------------------------------------------------------------------------- */
+/* Application Entry Point */
 void app_main(void)
 {
     ESP_LOGI(TAG, "Booting %s (FW: v%s)...", DEVICE_NAME, FIRMWARE_VERSION);
